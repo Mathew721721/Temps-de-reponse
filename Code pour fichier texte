@@ -1,0 +1,17 @@
+import serial
+
+# Ouvrir la connexion série
+ser = serial.Serial('COM3', 9600)  # Remplacez 'COM3' par le port correct (par exemple /dev/ttyUSB0 sur Linux)
+
+# Ouvrir le fichier pour écrire les données
+with open('temps_reponse.txt', 'w') as f:
+    f.write("Temps de réponse (ms)\n")  # En-tête du fichier
+
+    # Lire les données envoyées par Arduino
+    for i in range(10):  # Limite à 10 essais
+        line = ser.readline().decode('utf-8').strip()  # Lire une ligne
+        if "Essai" in line:
+            f.write(line + '\n')  # Écrire la ligne dans le fichier
+
+# Fermer la connexion série
+ser.close()
