@@ -1,22 +1,47 @@
-// Définir la broche analogique à laquelle le FSR est connecté
-const int fsrPin = A0;
+// Définir les broches utilisées
+const int fsrPin = A0;        // Broche analogique pour la résistance FSR
+const int ledPin = LED_BUILTIN; // Broche pour la LED intégrée (sur Arduino R4, généralement D13)
 
-// Définir les variables pour la lecture du capteur
-int fsrValue = 0;
+// Variables
+int fsrValue = 0;             // Valeur lue de la résistance FSR
+unsigned long startTime = 0;  // Temps de départ pour le top de 1 seconde
+unsigned long elapsedTime = 0; // Temps écoulé pour mesurer la réponse
 
 void setup() {
-  // Initialiser la communication série
+  // Initialisation de la LED intégrée
+  pinMode(ledPin, OUTPUT);
+  
+  // Initialisation de la communication série
   Serial.begin(9600);
+  
+  // Envoi du message de démarrage
+  Serial.println("Le top va commencer...");
+  delay(1000);  // Attente de 1 seconde avant de commencer
 }
 
 void loop() {
-  // Lire la valeur du FSR
-  fsrValue = analogRead(fsrPin);
+  // Allumer la LED pendant 1 seconde
+  digitalWrite(ledPin, HIGH);
+  startTime = millis(); // Sauvegarder le temps du top
+  while (millis() - startTime < 1000) {
+    // Attente de 1 seconde
+  }
+  digitalWrite(ledPin, LOW);  // Éteindre la LED après 1 seconde
+
+  // Mesurer le temps de réponse pour atteindre une valeur FSR > 300
+  Serial.println("Appuyez sur la résistance FSR...");
+  elapsedTime = 0; // Réinitialiser le temps écoulé
   
-  // Afficher la valeur lue sur le moniteur série
-  Serial.print("FSR Value: ");
-  Serial.println(fsrValue);
-  
-  // Attendre 500 millisecondes avant la prochaine lecture
-  delay(500);
+  // Attendre que la valeur FSR dépasse 300
+  while (fsrValue <= 300) {
+    fsrValue = analogRead(fsrPin); // Lire la valeur du FSR
+    elapsedTime = millis() - startTime; // Calculer le temps écoulé depuis le top
+  }
+
+  // Une fois que la valeur dépasse 300, afficher le temps de réponse
+  Serial.print("Temps de réponse : ");
+  Serial.print(elapsedTime);  // Temps en millisecondes
+  Serial.println(" ms");
+
+  delay(2000); // Attendre 2 secondes avant de recommencer le processus
 }
