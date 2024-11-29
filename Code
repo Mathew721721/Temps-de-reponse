@@ -1,23 +1,19 @@
 // Définir les broches utilisées
 const int fsrPin = A0;        // Broche analogique pour la résistance FSR
-const int ledPin = LED_BUILTIN; // Broche pour la LED intégrée (sur Arduino R4, généralement D13)
+const int ledPin = LED_BUILTIN; // Broche pour la LED intégrée
 
 // Variables
 int fsrValue = 0;             // Valeur lue de la résistance FSR
-unsigned long startTime = 0;  // Temps de départ pour le top de 1 seconde
+unsigned long startTime = 0;  // Temps de départ pour une plage de 10 secondes
 unsigned long elapsedTime = 0; // Temps écoulé pour mesurer la réponse
 int numEssais = 0;            // Compteur d'essais
+int taskCount = 0;            // Compteur de tâches réalisées dans une plage de 10 secondes
 
 void setup() {
-  // Initialisation de la LED intégrée
-  pinMode(ledPin, OUTPUT);
-  
-  // Initialisation de la communication série
-  Serial.begin(9600);
-  
-  // Vérification de la connexion série
+  pinMode(ledPin, OUTPUT);  // Initialisation de la LED intégrée
+  Serial.begin(9600);       // Initialisation de la communication série
   Serial.println("Démarrage du programme...");
-  delay(1000);  // Attente de 1 seconde avant de commencer
+  delay(1000);              // Attente de 1 seconde avant de commencer
 }
 
 void loop() {
@@ -26,42 +22,57 @@ void loop() {
     while (true) {}  // Bloque le programme une fois les essais terminés
   }
 
-  // Début d'un nouvel essai
-  Serial.println("Le top va commencer...");
-
-  // Allumer la LED pendant 1 seconde
-  digitalWrite(ledPin, HIGH);
-  delay(1000); // LED allumée pendant 1 seconde
-  digitalWrite(ledPin, LOW);  // Éteindre la LED après 1 seconde
-  
-  // Attendre que l'utilisateur appuie sur la résistance FSR
-  Serial.println("Appuyez sur la résistance FSR...");
-  
-  // Réinitialiser la valeur FSR
-  fsrValue = 0;
-
-  // Démarrer le chronomètre après l'extinction de la LED
-  startTime = millis();
-
-  // Mesurer le temps de réponse pour atteindre une valeur FSR > 300
-  while (fsrValue <= 300) {
-    fsrValue = analogRead(fsrPin); // Lire la valeur du FSR
-    elapsedTime = millis() - startTime; // Calculer le temps écoulé depuis le top
-  }
-
-  // Une fois que la valeur dépasse 300, afficher le temps de réponse
-  Serial.print("Temps de réponse : ");
-  Serial.print(elapsedTime);  // Temps en millisecondes
-  Serial.println(" ms");
-
-  // Enregistrer le temps de réponse dans le moniteur série
   Serial.print("Essai ");
   Serial.print(numEssais + 1);
-  Serial.print(": ");
-  Serial.print(elapsedTime);  // Temps en millisecondes
-  Serial.println(" ms");
+  Serial.println(" commence...");
+
+  // Démarrer la plage de 10 secondes
+  startTime = millis();
+  taskCount = 0;
+
+  while (millis() - startTime < 10000) {  // 10 secondes pour chaque essai
+    if (taskCount >= 3) {
+      break;  // Si 3 tâches sont réalisées, terminer cette plage
+    }
+
+    // Signaler le top avec la LED
+    Serial.println("Le top va commencer...");
+    digitalWrite(ledPin, HIGH);
+    delay(1000);  // LED allumée pendant 1 seconde
+    digitalWrite(ledPin, LOW);
+
+    Serial.println("Appuyez sur la résistance FSR...");
+    fsrValue = 0;
+
+    // Chronométrer le temps de réponse
+    unsigned long taskStartTime = millis();
+    while (fsrValue <= 300) {
+      fsrValue = analogRead(fsrPin);
+      elapsedTime = millis() - taskStartTime;
+
+      // Vérification d'un timeout pour éviter un blocage
+      if (elapsedTime > 5000) {  // Timeout de 5 secondes pour une tâche
+        Serial.println("Temps écoulé pour cette tâche !");
+        break;
+      }
+    }
+
+    if (fsrValue > 300) {
+      Serial.print("Temps de réponse : ");
+      Serial.print(elapsedTime);
+      Serial.println(" ms");
+      taskCount++;  // Incrémenter le compteur de tâches réalisées
+    }
+
+    delay(1000);  // Petite pause avant le prochain top
+  }
+
+  Serial.print("Essai ");
+  Serial.print(numEssais + 1);
+  Serial.print(" terminé avec ");
+  Serial.print(taskCount);
+  Serial.println(" tâches réalisées.");
 
   numEssais++;  // Incrémenter le compteur d'essais
-
-  delay(2000); // Attendre 2 secondes avant de recommencer le processus
+  delay(2000);  // Attendre 2 secondes avant le prochain essai
 }
