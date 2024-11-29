@@ -1,0 +1,22 @@
+// Définir la broche analogique à laquelle le FSR est connecté
+const int fsrPin = A0;
+
+// Définir les variables pour la lecture du capteur
+int fsrValue = 0;
+
+void setup() {
+  // Initialiser la communication série
+  Serial.begin(9600);
+}
+
+void loop() {
+  // Lire la valeur du FSR
+  fsrValue = analogRead(fsrPin);
+  
+  // Afficher la valeur lue sur le moniteur série
+  Serial.print("FSR Value: ");
+  Serial.println(fsrValue);
+  
+  // Attendre 500 millisecondes avant la prochaine lecture
+  delay(500);
+}
