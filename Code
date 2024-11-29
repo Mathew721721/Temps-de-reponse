@@ -6,6 +6,7 @@ const int ledPin = LED_BUILTIN; // Broche pour la LED intégrée (sur Arduino R4
 int fsrValue = 0;             // Valeur lue de la résistance FSR
 unsigned long startTime = 0;  // Temps de départ pour le top de 1 seconde
 unsigned long elapsedTime = 0; // Temps écoulé pour mesurer la réponse
+int numEssais = 0;            // Compteur d'essais
 
 void setup() {
   // Initialisation de la LED intégrée
@@ -20,6 +21,11 @@ void setup() {
 }
 
 void loop() {
+  if (numEssais >= 10) {  // Limite à 10 essais
+    Serial.println("10 essais terminés.");
+    while (true) {}  // Bloque le programme une fois les essais terminés
+  }
+
   // Début d'un nouvel essai
   Serial.println("Le top va commencer...");
 
@@ -41,15 +47,21 @@ void loop() {
   while (fsrValue <= 300) {
     fsrValue = analogRead(fsrPin); // Lire la valeur du FSR
     elapsedTime = millis() - startTime; // Calculer le temps écoulé depuis le top
-    // Afficher la valeur FSR en temps réel pour déboguer
-    Serial.print("Valeur FSR : ");
-    Serial.println(fsrValue);
   }
 
   // Une fois que la valeur dépasse 300, afficher le temps de réponse
   Serial.print("Temps de réponse : ");
   Serial.print(elapsedTime);  // Temps en millisecondes
   Serial.println(" ms");
+
+  // Enregistrer le temps de réponse dans le moniteur série
+  Serial.print("Essai ");
+  Serial.print(numEssais + 1);
+  Serial.print(": ");
+  Serial.print(elapsedTime);  // Temps en millisecondes
+  Serial.println(" ms");
+
+  numEssais++;  // Incrémenter le compteur d'essais
 
   delay(2000); // Attendre 2 secondes avant de recommencer le processus
 }
