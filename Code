@@ -14,12 +14,18 @@ void setup() {
   // Initialisation de la communication série
   Serial.begin(9600);
   
-  // Envoi du message de démarrage
-  Serial.println("Le top va commencer...");
+  // Vérification de la connexion série
+  Serial.println("Démarrage du programme...");
   delay(1000);  // Attente de 1 seconde avant de commencer
 }
 
 void loop() {
+  // Début d'un nouvel essai
+  Serial.println("Le top va commencer...");
+
+  // Réinitialiser fsrValue à chaque essai
+  fsrValue = 0;
+
   // Allumer la LED pendant 1 seconde
   digitalWrite(ledPin, HIGH);
   startTime = millis(); // Sauvegarder le temps du top
@@ -36,6 +42,9 @@ void loop() {
   while (fsrValue <= 300) {
     fsrValue = analogRead(fsrPin); // Lire la valeur du FSR
     elapsedTime = millis() - startTime; // Calculer le temps écoulé depuis le top
+    // Afficher la valeur FSR en temps réel pour déboguer
+    Serial.print("Valeur FSR : ");
+    Serial.println(fsrValue);
   }
 
   // Une fois que la valeur dépasse 300, afficher le temps de réponse
