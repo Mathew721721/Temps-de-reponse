@@ -23,22 +23,21 @@ void loop() {
   // Début d'un nouvel essai
   Serial.println("Le top va commencer...");
 
-  // Réinitialiser fsrValue à chaque essai
-  fsrValue = 0;
-
   // Allumer la LED pendant 1 seconde
   digitalWrite(ledPin, HIGH);
-  startTime = millis(); // Sauvegarder le temps du top
-  while (millis() - startTime < 1000) {
-    // Attente de 1 seconde
-  }
+  delay(1000); // LED allumée pendant 1 seconde
   digitalWrite(ledPin, LOW);  // Éteindre la LED après 1 seconde
+  
+  // Attendre que l'utilisateur appuie sur la résistance FSR
+  Serial.println("Appuyez sur la résistance FSR...");
+  
+  // Réinitialiser la valeur FSR
+  fsrValue = 0;
+
+  // Démarrer le chronomètre après l'extinction de la LED
+  startTime = millis();
 
   // Mesurer le temps de réponse pour atteindre une valeur FSR > 300
-  Serial.println("Appuyez sur la résistance FSR...");
-  elapsedTime = 0; // Réinitialiser le temps écoulé
-  
-  // Attendre que la valeur FSR dépasse 300
   while (fsrValue <= 300) {
     fsrValue = analogRead(fsrPin); // Lire la valeur du FSR
     elapsedTime = millis() - startTime; // Calculer le temps écoulé depuis le top
