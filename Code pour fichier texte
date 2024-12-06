@@ -83,7 +83,9 @@ def demarrer():
     # Fermeture de la connexion série après tous les essais
     ser.close()
     print("Connexion série fermée.")
-    label_etat.config(text="Expérience terminée.")
+    print("Veuillez débrancher et rebrancher l'Arduino avant de relancer une mesure")
+    label_etat.config(text="Expérience Terminée. Veuillez débrancher et rebrancher l'Arduino avant de relancer une mesure.")
+
 
 # Créer la fenêtre principale
 root = tk.Tk()
