@@ -47,6 +47,9 @@ def demarrer():
         ser.write(b"START\n")
         print(f"Essai {essai} commencé...")
         
+        # Ajouter une courte attente pour être sûr que l'Arduino est prêt
+        time.sleep(1)
+        
         # Lire et traiter les données
         task_times = []  # Liste pour stocker les temps d'un essai
         try:
