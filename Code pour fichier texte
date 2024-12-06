@@ -1,67 +1,115 @@
+import tkinter as tk
+from tkinter import filedialog
+import os
 import serial
 import time
 
-# Configuration du port série
-arduino_port = "COM8"  # Remplacez par le port correct
-baud_rate = 9600
-timeout = 1  # Délai de lecture
-output_file = "temps_reponse.txt"  # Fichier pour enregistrer les données
+# Fonction pour ouvrir le répertoire de destination
+def parcourir():
+    folder_selected = filedialog.askdirectory()
+    entry_repertoire.delete(0, tk.END)
+    entry_repertoire.insert(0, folder_selected)
 
-# Ouvrir la connexion série
-ser = serial.Serial(arduino_port, baud_rate, timeout=timeout)
-time.sleep(2)  # Attendre que l'Arduino redémarre après l'ouverture de la connexion
-
-# Lecture des messages initiaux de l'Arduino
-print("Lecture des messages initiaux...")
-while ser.in_waiting > 0:
-    data = ser.readline().decode('utf-8').strip()
-    print(data)
-
-# Envoyer la commande START
-ser.write(b"START\n")
-print("Commande START envoyée. Lecture des données...")
-
-# Variables pour le suivi des données
-essai_count = 0  # Compteur d'essais
-task_times = []  # Liste pour stocker les temps d'un essai
-
-# Ouvrir le fichier pour enregistrer les résultats
-with open(output_file, "w") as file:
-    # Écrire l'entête dans le fichier
-    file.write("Essai | Temps de réponse individuels (ms) | Moyenne (ms)\n")
+# Fonction pour démarrer l'expérience
+def demarrer():
+    essais = int(entry_essais.get())
+    prefixe = entry_prefixe.get()
+    repertoire = entry_repertoire.get()
+    if not repertoire:
+        print("Veuillez sélectionner un répertoire de destination.")
+        return
     
+    # Initialisation de la connexion série (port à adapter)
+    arduino_port = "COM8"  # Remplacez par le port correct
+    baud_rate = 9600
+    timeout = 1
     try:
-        while True:
-            if ser.in_waiting > 0:
-                data = ser.readline().decode('utf-8').strip()
-                print(data)  # Afficher les données reçues
+        ser = serial.Serial(arduino_port, baud_rate, timeout=timeout)
+        time.sleep(2)  # Attendre que l'Arduino redémarre
+        print("Connexion série établie.")
+    except Exception as e:
+        print(f"Erreur de connexion série : {e}")
+        return
 
-                # Si un temps de réponse est détecté
-                if "Temps de réponse" in data:
-                    time_response = int(data.split(":")[1].strip().split(" ")[0])
-                    task_times.append(time_response)  # Ajouter à la liste
-                    print(f"Temps de réponse ajouté : {time_response} ms")
+    # Démarrer les essais
+    for essai in range(1, essais + 1):
+        # Mise à jour de l'état
+        label_etat.config(text=f"Essai {essai} / {essais}")
+        
+        # Préparer le nom du fichier de sortie
+        fichier_nom = os.path.join(repertoire, f"{prefixe}{essai}_temps_reponse.txt")
+        with open(fichier_nom, "w") as file:
+            file.write("Essai | Temps de réponse individuels (ms) | Moyenne (ms)\n")
+        
+        # Envoyer la commande START à l'Arduino
+        ser.write(b"START\n")
+        print(f"Essai {essai} commencé...")
+        
+        # Lire et traiter les données
+        task_times = []  # Liste pour stocker les temps d'un essai
+        try:
+            while True:
+                if ser.in_waiting > 0:
+                    data = ser.readline().decode('utf-8').strip()
+                    print(data)  # Afficher les données reçues
 
-                # Si un essai est terminé
-                if "Essai" in data and "terminé" in data:
-                    essai_count += 1
-                    if task_times:
-                        # Calcul de la moyenne
-                        avg_time = sum(task_times) / len(task_times)
-                        # Écriture des données dans le fichier
-                        file.write(f"{essai_count} | {task_times} | {avg_time:.2f} ms\n")
-                        print(f"Essai {essai_count} terminé. Moyenne : {avg_time:.2f} ms")
-                    
-                    # Réinitialisation pour le prochain essai
-                    task_times = []
+                    if "Temps de réponse" in data:
+                        time_response = int(data.split(":")[1].strip().split(" ")[0])
+                        task_times.append(time_response)
+                        print(f"Temps de réponse ajouté : {time_response} ms")
 
-                # Si les 10 essais sont terminés
-                if "10 essais terminés" in data:
-                    print("10 essais terminés. Vous pouvez relancer.")
-                    break
+                    if "Essai" in data and "terminé" in data:
+                        if task_times:
+                            avg_time = sum(task_times) / len(task_times)
+                            with open(fichier_nom, "a") as file:
+                                file.write(f"{essai} | {task_times} | {avg_time:.2f} ms\n")
+                            print(f"Essai {essai} terminé. Moyenne : {avg_time:.2f} ms")
+                        break
+                    if "10 essais terminés" in data:
+                        print("Tous les essais terminés.")
+                        break
 
-    except KeyboardInterrupt:
-        print("\nInterruption par l'utilisateur.")
-    finally:
-        ser.close()
-        print("Connexion série fermée.")
+        except KeyboardInterrupt:
+            print("Interruption par l'utilisateur.")
+        
+        # Mise à jour après chaque essai
+        time.sleep(1)
+
+    # Fermeture de la connexion série après tous les essais
+    ser.close()
+    print("Connexion série fermée.")
+    label_etat.config(text="Expérience terminée.")
+
+# Créer la fenêtre principale
+root = tk.Tk()
+root.title("Gestionnaire d'Essais FSR")
+
+# Créer et organiser les éléments de l'interface
+label_essais = tk.Label(root, text="Nombre d'essais :")
+label_essais.grid(row=0, column=0, padx=10, pady=10)
+entry_essais = tk.Entry(root)
+entry_essais.grid(row=0, column=1, padx=10, pady=10)
+
+label_prefixe = tk.Label(root, text="Préfixe des fichiers :")
+label_prefixe.grid(row=1, column=0, padx=10, pady=10)
+entry_prefixe = tk.Entry(root)
+entry_prefixe.grid(row=1, column=1, padx=10, pady=10)
+
+label_repertoire = tk.Label(root, text="Répertoire de destination :")
+label_repertoire.grid(row=2, column=0, padx=10, pady=10)
+entry_repertoire = tk.Entry(root)
+entry_repertoire.grid(row=2, column=1, padx=10, pady=10)
+button_parcourir = tk.Button(root, text="Parcourir", command=parcourir)
+button_parcourir.grid(row=2, column=2, padx=10, pady=10)
+
+label_etat = tk.Label(root, text="Essai courant : 0")
+label_etat.grid(row=3, column=0, columnspan=3, padx=10, pady=10)
+
+button_demarrer = tk.Button(root, text="Démarrer", command=demarrer)
+button_demarrer.grid(row=4, column=0, padx=10, pady=10)
+
+button_arreter = tk.Button(root, text="Arrêter", command=root.quit)
+button_arreter.grid(row=4, column=1, padx=10, pady=10)
+
+# Lancer la boucle principale de l'interface graphique
+root.mainloop()
