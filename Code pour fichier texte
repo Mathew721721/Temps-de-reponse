@@ -1,17 +1,54 @@
 import serial
+import time
 
-# Ouvrir la connexion série
-ser = serial.Serial('COM3', 9600)  # Remplacez 'COM3' par le port correct (par exemple /dev/ttyUSB0 sur Linux)
+# Configuration du port série pour lire les données envoyées par l'Arduino
+# Vous devez définir le port série utilisé par votre Arduino (ex : COM3 sur Windows, /dev/ttyACM0 sur Linux)
+arduino_port = "/dev/ttyACM0"  # Remplacer par le port correct sur votre machine
+baud_rate = 9600  # La même vitesse que celle utilisée dans l'Arduino
+file_name = "temps_reponse.txt"  # Nom du fichier texte pour enregistrer les données
 
-# Ouvrir le fichier pour écrire les données
-with open('temps_reponse.txt', 'w') as f:
-    f.write("Temps de réponse (ms)\n")  # En-tête du fichier
+# Ouvrir la connexion série avec l'Arduino
+ser = serial.Serial(arduino_port, baud_rate, timeout=1)
+time.sleep(2)  # Attendre que la connexion série soit prête
 
-    # Lire les données envoyées par Arduino
-    for i in range(10):  # Limite à 10 essais
-        line = ser.readline().decode('utf-8').strip()  # Lire une ligne
-        if "Essai" in line:
-            f.write(line + '\n')  # Écrire la ligne dans le fichier
+# Ouvrir le fichier texte en mode écriture
+with open(file_name, "w") as file:
+    # Écrire l'entête dans le fichier
+    file.write("Essai | Moyenne des temps de réponse (ms)\n")
+    
+    # Variables pour suivre les données
+    essai_count = 0  # Nombre d'essais
+    task_times = []  # Liste des temps de réponse pour un essai
 
-# Fermer la connexion série
+    # Boucle pour lire les données envoyées par l'Arduino
+    while True:
+        # Lire la ligne envoyée par l'Arduino
+        line = ser.readline().decode('utf-8').strip()
+        
+        # Vérifier si la ligne contient un temps de réponse
+        if "Temps de réponse" in line:
+            # Extraire le temps de réponse
+            time_response = line.split(":")[1].strip()
+            task_times.append(int(time_response))  # Ajouter le temps à la liste des temps de réponse
+            print(f"Temps de réponse ajouté : {time_response} ms")
+        
+        # Vérifier si un essai est terminé (par exemple, 3 tâches)
+        if "Essai" in line and "terminé" in line:
+            # Calculer la moyenne des temps pour cet essai
+            if task_times:
+                avg_time = sum(task_times) / len(task_times)  # Moyenne des temps
+                essai_count += 1
+                # Enregistrer la moyenne dans le fichier
+                file.write(f"Essai {essai_count} | {avg_time:.2f} ms\n")
+                print(f"Essai {essai_count} terminé. Moyenne : {avg_time:.2f} ms")
+            
+            # Réinitialiser les données pour le prochain essai
+            task_times = []
+        
+        # Vérifier la fin des essais (exemple : 10 essais terminés)
+        if "10 essais terminés" in line:
+            print("10 essais terminés, arrêt du programme.")
+            break
+
+# Fermer le port série après la fin
 ser.close()
