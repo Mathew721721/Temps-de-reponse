@@ -19,6 +19,13 @@ def demarrer():
         print("Veuillez sélectionner un répertoire de destination.")
         return
     
+    # Préparer le nom du fichier de sortie global pour tous les essais
+    fichier_nom = os.path.join(repertoire, f"{prefixe}_temps_reponse.txt")
+    
+    # Ouvrir le fichier en mode ajout pour écrire les résultats de tous les essais
+    with open(fichier_nom, "a") as file:
+        file.write("Essai | Temps de réponse individuels (ms) | Moyenne (ms)\n")
+    
     # Initialisation de la connexion série (port à adapter)
     arduino_port = "COM8"  # Remplacez par le port correct
     baud_rate = 9600
@@ -35,11 +42,6 @@ def demarrer():
     for essai in range(1, essais + 1):
         # Mise à jour de l'état
         label_etat.config(text=f"Essai {essai} / {essais}")
-        
-        # Préparer le nom du fichier de sortie
-        fichier_nom = os.path.join(repertoire, f"{prefixe}{essai}_temps_reponse.txt")
-        with open(fichier_nom, "w") as file:
-            file.write("Essai | Temps de réponse individuels (ms) | Moyenne (ms)\n")
         
         # Envoyer la commande START à l'Arduino
         ser.write(b"START\n")
