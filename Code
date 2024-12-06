@@ -17,62 +17,85 @@ void setup() {
 }
 
 void loop() {
-  if (numEssais >= 10) {  // Limite à 10 essais
-    Serial.println("10 essais terminés.");
-    while (true) {}  // Bloque le programme une fois les essais terminés
-  }
+  // Attendre une commande de démarrage pour commencer les essais
+  waitForCommand();
 
-  Serial.print("Essai ");
-  Serial.print(numEssais + 1);
-  Serial.println(" commence...");
+  // Réinitialiser les essais
+  numEssais = 0;
 
-  // Démarrer la plage de 10 secondes
-  startTime = millis();
-  taskCount = 0;
+  while (numEssais < 10) {  // Limite à 10 essais
+    Serial.print("Essai ");
+    Serial.print(numEssais + 1);
+    Serial.println(" commence...");
 
-  while (millis() - startTime < 10000) {  // 10 secondes pour chaque essai
-    if (taskCount >= 3) {
-      break;  // Si 3 tâches sont réalisées, terminer cette plage
+    // Démarrer la plage de 10 secondes
+    startTime = millis();
+    taskCount = 0;
+
+    while (millis() - startTime < 10000) {  // 10 secondes pour chaque essai
+      if (taskCount >= 3) {
+        break;  // Si 3 tâches sont réalisées, terminer cette plage
+      }
+
+      // Signaler le top avec la LED
+      Serial.println("Le top va commencer...");
+      digitalWrite(ledPin, HIGH);
+      delay(1000);  // LED allumée pendant 1 seconde
+      digitalWrite(ledPin, LOW);
+
+      Serial.println("Appuyez sur la résistance FSR...");
+      fsrValue = 0;
+
+      // Chronométrer le temps de réponse
+      unsigned long taskStartTime = millis();
+      while (fsrValue <= 300) {
+        fsrValue = analogRead(fsrPin);
+        elapsedTime = millis() - taskStartTime;
+
+        // Vérification d'un timeout pour éviter un blocage
+        if (elapsedTime > 5000) {  // Timeout de 5 secondes pour une tâche
+          Serial.println("Temps écoulé pour cette tâche !");
+          break;
+        }
+      }
+
+      if (fsrValue > 300) {
+        Serial.print("Temps de réponse : ");
+        Serial.print(elapsedTime);
+        Serial.println(" ms");
+        taskCount++;  // Incrémenter le compteur de tâches réalisées
+      }
+
+      delay(1000);  // Petite pause avant le prochain top
     }
 
-    // Signaler le top avec la LED
-    Serial.println("Le top va commencer...");
-    digitalWrite(ledPin, HIGH);
-    delay(1000);  // LED allumée pendant 1 seconde
-    digitalWrite(ledPin, LOW);
+    Serial.print("Essai ");
+    Serial.print(numEssais + 1);
+    Serial.print(" terminé avec ");
+    Serial.print(taskCount);
+    Serial.println(" tâches réalisées.");
 
-    Serial.println("Appuyez sur la résistance FSR...");
-    fsrValue = 0;
+    numEssais++;  // Incrémenter le compteur d'essais
+    delay(2000);  // Attendre 2 secondes avant le prochain essai
+  }
 
-    // Chronométrer le temps de réponse
-    unsigned long taskStartTime = millis();
-    while (fsrValue <= 300) {
-      fsrValue = analogRead(fsrPin);
-      elapsedTime = millis() - taskStartTime;
+  // Annonce la fin des essais
+  Serial.println("10 essais terminés. Attente d'une commande pour redémarrer...");
+}
 
-      // Vérification d'un timeout pour éviter un blocage
-      if (elapsedTime > 5000) {  // Timeout de 5 secondes pour une tâche
-        Serial.println("Temps écoulé pour cette tâche !");
+// Fonction pour attendre une commande série
+void waitForCommand() {
+  Serial.println("Envoyez la commande 'START' pour lancer les essais.");
+  while (true) {
+    if (Serial.available() > 0) {
+      String command = Serial.readStringUntil('\n');  // Lire la commande envoyée
+      command.trim();  // Supprimer les espaces ou caractères inutiles
+      if (command == "START") {
+        Serial.println("Commande reçue : démarrage des essais !");
         break;
+      } else {
+        Serial.println("Commande non reconnue. Envoyez 'START' pour commencer.");
       }
     }
-
-    if (fsrValue > 300) {
-      Serial.print("Temps de réponse : ");
-      Serial.print(elapsedTime);
-      Serial.println(" ms");
-      taskCount++;  // Incrémenter le compteur de tâches réalisées
-    }
-
-    delay(1000);  // Petite pause avant le prochain top
   }
-
-  Serial.print("Essai ");
-  Serial.print(numEssais + 1);
-  Serial.print(" terminé avec ");
-  Serial.print(taskCount);
-  Serial.println(" tâches réalisées.");
-
-  numEssais++;  // Incrémenter le compteur d'essais
-  delay(2000);  // Attendre 2 secondes avant le prochain essai
 }
