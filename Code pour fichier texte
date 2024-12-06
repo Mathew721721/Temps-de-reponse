@@ -5,6 +5,7 @@ import time
 arduino_port = "COM8"  # Remplacez par le port correct
 baud_rate = 9600
 timeout = 1  # Délai de lecture
+output_file = "temps_reponse.txt"  # Fichier pour enregistrer les données
 
 # Ouvrir la connexion série
 ser = serial.Serial(arduino_port, baud_rate, timeout=timeout)
@@ -20,17 +21,47 @@ while ser.in_waiting > 0:
 ser.write(b"START\n")
 print("Commande START envoyée. Lecture des données...")
 
-# Lecture des données
-try:
-    while True:
-        if ser.in_waiting > 0:
-            data = ser.readline().decode('utf-8').strip()
-            print(data)  # Afficher les données reçues
+# Variables pour le suivi des données
+essai_count = 0  # Compteur d'essais
+task_times = []  # Liste pour stocker les temps d'un essai
 
-            if "10 essais terminés" in data:
-                print("Essais terminés. Vous pouvez relancer.")
-                break
-except KeyboardInterrupt:
-    print("\nInterruption par l'utilisateur.")
-finally:
-    ser.close
+# Ouvrir le fichier pour enregistrer les résultats
+with open(output_file, "w") as file:
+    # Écrire l'entête dans le fichier
+    file.write("Essai | Temps de réponse individuels (ms) | Moyenne (ms)\n")
+    
+    try:
+        while True:
+            if ser.in_waiting > 0:
+                data = ser.readline().decode('utf-8').strip()
+                print(data)  # Afficher les données reçues
+
+                # Si un temps de réponse est détecté
+                if "Temps de réponse" in data:
+                    time_response = int(data.split(":")[1].strip().split(" ")[0])
+                    task_times.append(time_response)  # Ajouter à la liste
+                    print(f"Temps de réponse ajouté : {time_response} ms")
+
+                # Si un essai est terminé
+                if "Essai" in data and "terminé" in data:
+                    essai_count += 1
+                    if task_times:
+                        # Calcul de la moyenne
+                        avg_time = sum(task_times) / len(task_times)
+                        # Écriture des données dans le fichier
+                        file.write(f"{essai_count} | {task_times} | {avg_time:.2f} ms\n")
+                        print(f"Essai {essai_count} terminé. Moyenne : {avg_time:.2f} ms")
+                    
+                    # Réinitialisation pour le prochain essai
+                    task_times = []
+
+                # Si les 10 essais sont terminés
+                if "10 essais terminés" in data:
+                    print("10 essais terminés. Vous pouvez relancer.")
+                    break
+
+    except KeyboardInterrupt:
+        print("\nInterruption par l'utilisateur.")
+    finally:
+        ser.close()
+        print("Connexion série fermée.")
